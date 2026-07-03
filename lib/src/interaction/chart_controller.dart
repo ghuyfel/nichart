@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 /// A visible-domain window: `[min, max]` in domain units (numeric values,
 /// epoch milliseconds for time axes).
@@ -50,12 +53,33 @@ class DomainWindow {
 class ChartController extends ChangeNotifier {
   DomainWindow? _xDomain;
   DomainWindow? _yDomain;
+  Rect? _plotArea;
 
   /// The visible x window, or null when showing the full data domain.
   DomainWindow? get xDomain => _xDomain;
 
   /// The visible y window, or null when showing the full data domain.
   DomainWindow? get yDomain => _yDomain;
+
+  /// The chart's plot rectangle in chart-local pixels (the area data is
+  /// drawn into, excluding axis labels), or null before the first layout.
+  ///
+  /// Updated by the chart after each layout; listeners fire on change.
+  /// Lets surrounding widgets align with the plot — shared-axis strips,
+  /// external legends, overlay decorations.
+  Rect? get plotArea => _plotArea;
+
+  /// Called by the chart after layout. Not for app code.
+  @internal
+  void attachPlotArea(Rect value) {
+    if (_plotArea == value) return;
+    _plotArea = value;
+    // Layout-time write; defer the notification so listeners can safely
+    // call setState.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_plotArea == value) notifyListeners();
+    });
+  }
 
   /// Sets the visible x window (domain units).
   void setXDomain(double min, double max) {

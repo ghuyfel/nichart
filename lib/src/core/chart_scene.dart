@@ -24,6 +24,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
+import '../annotations/annotation.dart';
 import '../axes/axis.dart';
 import '../data/lttb.dart';
 import '../interaction/chart_controller.dart';
@@ -37,6 +38,7 @@ import '../series/bar_painter.dart';
 import '../series/bar_style.dart';
 import '../series/donut_painter.dart';
 import '../series/line_painter.dart';
+import '../series/monotone_spline.dart' show dashPath;
 import '../series/scatter_painter.dart';
 import '../series/series.dart';
 import '../series/series_painter.dart';
@@ -209,6 +211,17 @@ class ChartScene {
   set emphasis(SeriesEmphasis? value) {
     if (value == _emphasis) return;
     _emphasis = value;
+    _invalidateLayout();
+  }
+
+  List<ChartAnnotation> _annotations = const [];
+
+  /// Reference bands and lines drawn in domain space. They never affect
+  /// the automatic domain bounds and are invisible to interaction.
+  List<ChartAnnotation> get annotations => _annotations;
+  set annotations(List<ChartAnnotation> value) {
+    if (identical(value, _annotations)) return;
+    _annotations = value;
     _invalidateLayout();
   }
 
@@ -839,6 +852,7 @@ class ChartScene {
     double? bestX;
     var bestDistance = double.infinity;
     for (var i = 0; i < _targetPoints.length; i++) {
+      if (i < _series.length && !_series[i].interactive) continue;
       final p = _nearestPointByX(i, cursorX);
       if (p == null) continue;
       final d = (space.xToPixel(p.dx) - position.dx).abs();
@@ -855,6 +869,7 @@ class ChartScene {
 
     final points = <HoveredPoint>[];
     for (var i = 0; i < _series.length; i++) {
+      if (!_series[i].interactive) continue;
       final nearest = _nearestPointByX(i, bestX);
       // Only series that actually have a point at (or effectively at) the
       // snapped x participate.
@@ -1337,7 +1352,7 @@ class ChartScene {
     };
     final Scale<double> xScaleD;
     switch (xAxis) {
-      case NumericAxis(:final min, :final max, :final tickFormatter):
+      case NumericAxis(:final min, :final max, :final ticks, :final tickFormatter):
         var scale = NumericScale.fromExtent(
           _xMin ?? 0,
           _xMax ?? 1,
@@ -1355,8 +1370,15 @@ class ChartScene {
         final formatter =
             tickFormatter ?? _defaultFormatter(scale, xTickTarget);
         _hoverXFormatter = formatter;
+        // Explicit ticks win over the generator; out-of-domain ticks are
+        // skipped so a pan/zoom window shows only what's visible.
         _xLabels = _buildLabels(
-          scale.ticks(targetTickCount: xTickTarget),
+          ticks == null
+              ? scale.ticks(targetTickCount: xTickTarget)
+              : [
+                  for (final tick in ticks)
+                    if (tick >= scale.min && tick <= scale.max) tick,
+                ],
           formatter,
         );
       case TimeAxis(:final min, :final max, :final tickFormatter):
@@ -1431,8 +1453,14 @@ class ChartScene {
     }
     final yFormatter =
         yAxis.tickFormatter ?? _defaultFormatter(yScale, yTickTarget);
+    final yTicks = yAxis.ticks;
     _yLabels = _buildLabels(
-      yScale.ticks(targetTickCount: yTickTarget),
+      yTicks == null
+          ? yScale.ticks(targetTickCount: yTickTarget)
+          : [
+              for (final tick in yTicks)
+                if (tick >= yScale.min && tick <= yScale.max) tick,
+            ],
       yFormatter,
     );
 
@@ -1469,6 +1497,7 @@ class ChartScene {
       plot = Offset.zero & size;
     }
     _space = CoordinateSpace(plotArea: plot, xScale: xScaleD, yScale: yScale);
+    _controller?.attachPlotArea(plot);
 
     // Decimate x labels that would collide at this width.
     _xLabelStride = _computeXLabelStride(plot.width);
@@ -1551,6 +1580,7 @@ class ChartScene {
       xScale: const NumericScale(min: 0, max: 1),
       yScale: const NumericScale(min: 0, max: 1),
     );
+    _controller?.attachPlotArea(plot);
 
     final donut = _series.first;
     final style = (donut as DonutSeries).style;
@@ -1963,6 +1993,41 @@ class ChartScene {
     final space = _effectiveSpace(target);
     final plot = space.plotArea;
 
+    // Band annotations first — behind the grid, so gridlines stay
+    // visible through the wash.
+    if (_annotations.isNotEmpty) {
+      canvas.save();
+      canvas.clipRect(plot);
+      for (final annotation in _annotations) {
+        if (annotation is! BandAnnotation) continue;
+        final paint = Paint()
+          ..color = annotation.color ??
+              theme.gridLineColor.withValues(alpha: 0.15);
+        final Rect rect;
+        if (annotation.vertical) {
+          final x1 = space.xToPixel(annotation.from);
+          final x2 = space.xToPixel(annotation.to);
+          rect = Rect.fromLTRB(
+            math.min(x1, x2),
+            plot.top,
+            math.max(x1, x2),
+            plot.bottom,
+          );
+        } else {
+          final y1 = space.yToPixel(annotation.from);
+          final y2 = space.yToPixel(annotation.to);
+          rect = Rect.fromLTRB(
+            plot.left,
+            math.min(y1, y2),
+            plot.right,
+            math.max(y1, y2),
+          );
+        }
+        canvas.drawRect(rect, paint);
+      }
+      canvas.restore();
+    }
+
     // Horizontal hairlines only — no vertical gridlines.
     final gridPaint = Paint()
       ..color = theme.gridLineColor
@@ -2021,10 +2086,12 @@ class ChartScene {
     }
   }
 
-  /// Paints the series.
+  /// Paints the series, then line annotations over them.
   void paintData(Canvas canvas) {
     final target = _space;
-    if (target == null || _painters.isEmpty) return;
+    if (target == null || (_painters.isEmpty && _annotations.isEmpty)) {
+      return;
+    }
     final space = _effectiveSpace(target);
     final entrance = _entranceT;
     final morph = _morphT;
@@ -2034,7 +2101,39 @@ class ChartScene {
     for (final painter in _painters) {
       painter.paint(canvas, space, theme, entrance: entrance, morph: morph);
     }
+    if (!_radial) _paintLineAnnotations(canvas, space);
     canvas.restore();
+  }
+
+  /// Reference lines sit over the series, beneath interaction chrome.
+  void _paintLineAnnotations(Canvas canvas, CoordinateSpace space) {
+    final plot = space.plotArea;
+    for (final annotation in _annotations) {
+      if (annotation is! LineAnnotation) continue;
+      var path = Path();
+      if (annotation.vertical) {
+        final x = space.xToPixel(annotation.value);
+        path
+          ..moveTo(x, plot.top)
+          ..lineTo(x, plot.bottom);
+      } else {
+        final y = space.yToPixel(annotation.value);
+        path
+          ..moveTo(plot.left, y)
+          ..lineTo(plot.right, y);
+      }
+      final dash = annotation.dashPattern;
+      if (dash != null && dash.isNotEmpty) {
+        path = dashPath(path, dash);
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = annotation.strokeWidth
+          ..color = annotation.color ?? theme.contextColor,
+      );
+    }
   }
 
   /// Paints crosshair, hover markers and the built-in tooltip (or, in

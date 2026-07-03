@@ -15,6 +15,7 @@
 library;
 
 export 'src/animation/chart_animation.dart';
+export 'src/annotations/annotation.dart';
 export 'src/axes/axis.dart';
 export 'src/data/data_point.dart';
 export 'src/data/downsampling.dart';

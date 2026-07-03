@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../animation/chart_animation.dart';
+import '../annotations/annotation.dart';
 import '../axes/axis.dart';
 import '../core/chart_layers.dart';
 import '../core/chart_scene.dart';
@@ -45,6 +46,7 @@ class Chart extends StatelessWidget {
   const Chart({
     super.key,
     required this.series,
+    this.annotations = const [],
     this.axes = const ChartAxes.cartesian(),
     this.theme,
     this.emphasis,
@@ -92,6 +94,12 @@ class Chart extends StatelessWidget {
   /// The series to draw, painted in list order. Palette colors are
   /// assigned by position, in fixed order.
   final List<Series<Object?>> series;
+
+  /// Reference bands and lines drawn in domain space (a target range, a
+  /// threshold, an event moment). Bands paint behind the grid; lines
+  /// paint over the series. Annotations never affect the automatic
+  /// domain bounds and are invisible to interaction.
+  final List<ChartAnnotation> annotations;
 
   /// Axis configuration. Defaults to fully automatic numeric axes, with a
   /// [CategoryAxis] substituted automatically for categorical data.
@@ -145,6 +153,7 @@ class Chart extends StatelessWidget {
         theme: theme ?? ChartTheme.of(context),
         axes: axes,
         series: series,
+        annotations: annotations,
         textDirection: Directionality.of(context),
         emphasis: emphasis,
         animation: animation,
@@ -208,6 +217,7 @@ class _AnimatedChart extends StatefulWidget {
     required this.theme,
     required this.axes,
     required this.series,
+    required this.annotations,
     required this.textDirection,
     required this.emphasis,
     required this.animation,
@@ -220,6 +230,7 @@ class _AnimatedChart extends StatefulWidget {
   final ChartTheme theme;
   final ChartAxes axes;
   final List<Series<Object?>> series;
+  final List<ChartAnnotation> annotations;
   final TextDirection textDirection;
   final SeriesEmphasis? emphasis;
   final ChartAnimation animation;
@@ -319,6 +330,7 @@ class _AnimatedChartState extends State<_AnimatedChart>
       ..theme = widget.theme
       ..axes = widget.axes
       ..series = widget.series
+      ..annotations = widget.annotations
       ..textDirection = widget.textDirection
       ..emphasis = widget.emphasis
       ..crosshair = widget.crosshair

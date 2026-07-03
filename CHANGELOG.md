@@ -5,6 +5,21 @@
 First stable release. The public API is now covered by semantic
 versioning: breaking changes only in major releases.
 
+- Annotations: `BandAnnotation` (a filled wash between two values — a
+  target range, a time window) and `LineAnnotation` (a solid or dashed
+  reference line — a threshold, an event moment), on either axis via
+  `Chart(annotations: [...])`. Bands paint behind the grid, lines over
+  the series; annotations never affect the automatic domain bounds and
+  are invisible to interaction.
+- `NumericAxis.ticks`: explicit tick positions overriding the nice-tick
+  generator, for domains with conventional divisions (hours of a day —
+  0/6/12/18/24). Out-of-domain ticks are skipped.
+- `ChartController.plotArea`: the plot rectangle in chart-local pixels,
+  updated after each layout — lets surrounding widgets align exactly
+  with the plot (shared-axis strips, external legends, overlays).
+- `Series.interactive`: opt a series out of crosshair snapping, hover
+  markers and tooltips — for decorative overlays that must never steal
+  the crosshair. Painting is unaffected.
 - Donut interaction: segments are hit-testable — hovering (mouse) or
   long-pressing (touch) shows a halo on the segment plus a tooltip with
   its value and share of the total; `ChartTooltip.builder` receives the

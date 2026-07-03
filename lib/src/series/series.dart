@@ -46,6 +46,7 @@ sealed class Series<T> {
     this.label,
     this.color,
     this.downsampling = const Downsampling.auto(),
+    this.interactive = true,
   })  : xAccessor = xAccessor ?? _inferX<T>(),
         categoryAccessor = categoryAccessor ?? _inferCategory<T>(),
         yAccessor = yAccessor ?? _requireY<T>();
@@ -91,6 +92,12 @@ sealed class Series<T> {
   /// default: series beyond ~2× the plot width in points are reduced
   /// before painting, while hover/tooltips keep seeing the raw data.
   final Downsampling downsampling;
+
+  /// Whether this series participates in hover: crosshair snapping,
+  /// hover markers and tooltips. Set false for purely decorative series
+  /// (visual overlays, guides) so they never steal the crosshair or add
+  /// tooltip rows. Painting is unaffected.
+  final bool interactive;
 
   /// Whether this series can resolve numeric x values.
   ///
@@ -213,6 +220,7 @@ final class LineSeries<T> extends Series<T> {
     super.label,
     super.color,
     super.downsampling,
+    super.interactive,
     this.style = const LineStyle(),
   });
 
@@ -240,6 +248,7 @@ final class AreaSeries<T> extends Series<T> {
     super.label,
     super.color,
     super.downsampling,
+    super.interactive,
     this.style = const LineStyle(area: AreaFill.gradient()),
   });
 
@@ -268,6 +277,7 @@ final class BarSeries<T> extends Series<T> {
     super.id,
     super.label,
     super.color,
+    super.interactive,
     this.style = const BarStyle(),
     this.arrangement = BarArrangement.grouped,
     this.emphasizedIndex,
@@ -330,6 +340,7 @@ final class ScatterSeries<T> extends Series<T> {
     super.id,
     super.label,
     super.color,
+    super.interactive,
     this.style = const ScatterStyle(),
   });
 

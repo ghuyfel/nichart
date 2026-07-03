@@ -35,6 +35,7 @@ final class NumericAxis extends ChartAxis {
     super.tickCount,
     this.min,
     this.max,
+    this.ticks,
     this.tickFormatter,
   });
 
@@ -43,6 +44,12 @@ final class NumericAxis extends ChartAxis {
 
   /// Pins the upper domain bound. When null the bound derives from data.
   final double? max;
+
+  /// Explicit tick positions, overriding the automatic generator (and
+  /// [tickCount]). Ticks outside the visible domain are skipped. Use when
+  /// the domain has conventional divisions the nice-tick algorithm can't
+  /// know — hours of a day (0/6/12/18/24), thresholds, calendar marks.
+  final List<double>? ticks;
 
   /// Custom tick label formatter. Defaults to a compact formatter
   /// (`1.5M`, `12k`, decimals matched to the tick step).
