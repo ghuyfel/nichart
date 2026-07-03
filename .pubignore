@@ -1,0 +1,17 @@
+# Generated output — never ship in the package archive.
+build/
+.dart_tool/
+pubspec.lock
+test/failures/
+
+# Example platform runners: keep the example's source in the archive, not
+# the generated runner scaffolding.
+example/build/
+example/.dart_tool/
+example/pubspec.lock
+example/web/
+example/windows/
+example/android/
+example/ios/
+example/macos/
+example/linux/
