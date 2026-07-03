@@ -64,9 +64,8 @@ class DonutSeriesPainter extends SeriesPainter {
     final bounds = space.plotArea;
     final center = bounds.center;
     final maxOuter = math.max(1.0, bounds.shortestSide / 2);
-    final outer = style.radius == null
-        ? maxOuter
-        : style.radius!.clamp(1.0, maxOuter);
+    final outer =
+        style.radius == null ? maxOuter : style.radius!.clamp(1.0, maxOuter);
     final inner = (outer * style.cutout).clamp(0.0, outer - 1);
 
     // Entrance: segments sweep in clockwise from the start angle.

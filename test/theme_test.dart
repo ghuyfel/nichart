@@ -35,8 +35,7 @@ void main() {
       expect(custom.palette, a.palette);
     });
 
-    testWidgets('of() derives from ambient Theme brightness',
-        (tester) async {
+    testWidgets('of() derives from ambient Theme brightness', (tester) async {
       late ChartTheme resolved;
       await tester.pumpWidget(
         MaterialApp(

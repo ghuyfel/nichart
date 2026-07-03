@@ -76,8 +76,7 @@ final class NumericScale extends Scale<double> {
   double get range => max - min;
 
   @override
-  double normalize(double value) =>
-      range == 0 ? 0.5 : (value - min) / range;
+  double normalize(double value) => range == 0 ? 0.5 : (value - min) / range;
 
   /// Nice tick values inside the domain.
   ///

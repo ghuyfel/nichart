@@ -88,7 +88,7 @@ List<double> ticksWithin(double min, double max, {int targetTickCount = 5}) {
   final first = (min / step).ceilToDouble() * step;
   final result = <double>[];
   final tolerance = step * 1e-6;
-  for (var i = 0; ; i++) {
+  for (var i = 0;; i++) {
     // Recompute from `first` each iteration (instead of accumulating), then
     // round-trip through a fixed decimal representation so binary
     // floating-point dust (0.30000000000000004) never reaches callers.

@@ -111,8 +111,7 @@ class BarSeriesPainter extends SeriesPainter {
   }) {
     if (entries.isEmpty || entrance <= 0) return;
 
-    final bandPixels =
-        (space.xToPixel(domainBand) - space.xToPixel(0)).abs();
+    final bandPixels = (space.xToPixel(domainBand) - space.xToPixel(0)).abs();
     if (bandPixels <= 0) return;
     final slotWidth = bandPixels * (1 - _kBandPadding) / slotCount;
     final thickness = math.min(style.maxThickness, slotWidth);
@@ -184,8 +183,7 @@ class BarSeriesPainter extends SeriesPainter {
       }
 
       final emphasized = emphasizedIndex;
-      final color =
-          emphasized == null || e.index == emphasized ? base : muted;
+      final color = emphasized == null || e.index == emphasized ? base : muted;
       canvas.drawRRect(rrect, Paint()..color = color);
     }
   }

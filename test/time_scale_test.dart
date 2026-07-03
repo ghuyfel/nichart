@@ -46,8 +46,7 @@ void main() {
     });
 
     test('very long spans use nice multi-year steps', () {
-      final r = timeTicks(DateTime(1900), DateTime(2026),
-          targetTickCount: 6);
+      final r = timeTicks(DateTime(1900), DateTime(2026), targetTickCount: 6);
       expect(r.granularity, TimeGranularity.year);
       expect(r.ticks.length, lessThanOrEqualTo(8));
       final step = r.ticks[1].year - r.ticks[0].year;

@@ -240,67 +240,56 @@ class DashboardPage extends StatelessWidget {
         ),
         ChartCard(
           title: 'Weekly active users',
-          subtitle: 'Gradient area, context series, crosshair + tooltip — '
-              'and a hand-rolled legend, because legends are just widgets.',
-          chart: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  for (final (label, color) in [
-                    ('This week', ChartPalettes.categoricalLight[0]),
-                    ('Last week', Theme.of(context)
-                        .colorScheme
-                        .onSurface
-                        .withValues(alpha: 0.38)),
-                  ]) ...[
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(2.5),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(label, style: textTheme.labelSmall),
-                    const SizedBox(width: 16),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: Chart(
-                  axes: const ChartAxes.cartesian(
-                    y: NumericAxis(min: 0),
-                  ),
-                  series: [
-                    LineSeries<DataPoint>(
-                      data: _thisWeek,
-                      label: 'This week',
-                      style:
-                          const LineStyle.smooth(area: AreaFill.gradient()),
-                    ),
-                    LineSeries<DataPoint>(
-                      data: _lastWeek,
-                      label: 'Last week',
-                      style: const LineStyle.context(),
-                    ),
-                  ],
+          subtitle: 'Gradient area, context series, crosshair + tooltip, '
+              'and a ChartLegend fed the same series list.',
+          chart: Builder(
+            builder: (context) {
+              final series = <Series<Object?>>[
+                LineSeries<DataPoint>(
+                  data: _thisWeek,
+                  label: 'This week',
+                  style: const LineStyle.smooth(area: AreaFill.gradient()),
                 ),
-              ),
-            ],
+                LineSeries<DataPoint>(
+                  data: _lastWeek,
+                  label: 'Last week',
+                  style: const LineStyle.context(),
+                ),
+              ];
+              return Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: ChartLegend(series: series),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: Chart(
+                      axes: const ChartAxes.cartesian(
+                        y: NumericAxis(min: 0),
+                      ),
+                      series: series,
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           source: '''
-Chart(
-  series: [
-    LineSeries(
-      data: thisWeek,
-      style: const LineStyle.smooth(area: AreaFill.gradient()),
-    ),
-    LineSeries(data: lastWeek, style: const LineStyle.context()),
-  ],
-)''',
+final series = [
+  LineSeries(
+    data: thisWeek,
+    label: 'This week',
+    style: const LineStyle.smooth(area: AreaFill.gradient()),
+  ),
+  LineSeries(data: lastWeek, label: 'Last week',
+      style: const LineStyle.context()),
+];
+
+Column(children: [
+  ChartLegend(series: series),   // same list, same colors
+  Expanded(child: Chart(series: series)),
+])''',
         ),
       ],
     );

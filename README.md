@@ -102,7 +102,8 @@ app includes a 500k-point stress page with a live fps readout.
 
 ## Status
 
-Under active development, building toward 1.0:
+**Stable (1.0)** — the public API follows semantic versioning; breaking
+changes only in major releases. Milestones built along the way:
 
 | Milestone | Contents | Status |
 |---|---|---|
@@ -113,8 +114,13 @@ Under active development, building toward 1.0:
 | M5 — Scale | Layered repaint, LTTB downsampling, 100k-point stress test | ✅ |
 | M6 — Polish | Donut, Sparkline, full gallery, pub.dev readiness | ✅ |
 
-Painting is decoupled from the widget layer by design; `PictureRecorder`-based
-PNG/SVG export is planned post-1.0.
+Charts are screen-reader friendly out of the box (auto-composed semantic
+labels, overridable via `semanticLabel:`), and `ChartLegend` renders a
+legend from the same series list the chart uses.
+
+Planned as additive releases: horizontal bars, `LogScale`, and
+`PictureRecorder`-based PNG/SVG export (painting is already decoupled from
+the widget layer by design).
 
 ## Example
 

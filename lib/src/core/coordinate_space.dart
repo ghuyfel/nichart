@@ -55,6 +55,5 @@ class CoordinateSpace {
   int get hashCode => Object.hash(plotArea, xScale, yScale);
 
   @override
-  String toString() =>
-      'CoordinateSpace($plotArea, x: $xScale, y: $yScale)';
+  String toString() => 'CoordinateSpace($plotArea, x: $xScale, y: $yScale)';
 }

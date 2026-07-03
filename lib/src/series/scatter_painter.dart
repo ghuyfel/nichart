@@ -58,8 +58,7 @@ class ScatterSeriesPainter extends SeriesPainter {
     if (points.length >= _kRawPointsThreshold) {
       // Batch path: one drawRawPoints call, entrance as a fade.
       if (entrance < 1) alpha *= entrance;
-      final buffer =
-          _rawBuffer ??= Float32List(points.length * 2);
+      final buffer = _rawBuffer ??= Float32List(points.length * 2);
       var count = 0;
       for (var i = 0; i < points.length; i++) {
         final p = points[i];
@@ -90,8 +89,14 @@ class ScatterSeriesPainter extends SeriesPainter {
     final from = morphFrom;
     for (var i = 0; i < n; i++) {
       var p = points[i];
+      var pointPaint = paint;
       if (from != null && morph < 1) {
-        p = Offset.lerp(i < from.length ? from[i] : p, p, morph)!;
+        if (i < from.length) {
+          p = Offset.lerp(from[i], p, morph)!;
+        } else {
+          // Unmatched new point: fade in instead of popping.
+          pointPaint = Paint()..color = base.withValues(alpha: alpha * morph);
+        }
       }
       if (!p.dx.isFinite || !p.dy.isFinite) continue;
       var radius = style.radius;
@@ -100,7 +105,7 @@ class ScatterSeriesPainter extends SeriesPainter {
         if (t <= 0) continue;
         radius *= t;
       }
-      canvas.drawCircle(space.toPixel(p), radius, paint);
+      canvas.drawCircle(space.toPixel(p), radius, pointPaint);
     }
   }
 }

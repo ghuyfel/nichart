@@ -8,6 +8,7 @@ import '../data/data_point.dart';
 import '../interaction/chart_controller.dart';
 import '../interaction/chart_interaction.dart';
 import '../interaction/hover_info.dart';
+import '../scales/tick_generator.dart';
 import '../series/line_style.dart';
 import '../series/series.dart';
 import '../style/chart_theme.dart';
@@ -50,6 +51,7 @@ class Chart extends StatelessWidget {
     this.animation = const ChartAnimation(),
     this.interactions = const [Crosshair(), ChartTooltip()],
     this.controller,
+    this.semanticLabel,
   });
 
   /// One-line convenience: a single line series over [data].
@@ -68,6 +70,7 @@ class Chart extends StatelessWidget {
     ChartAnimation animation = const ChartAnimation(),
     List<ChartInteraction> interactions = const [Crosshair(), ChartTooltip()],
     ChartController? controller,
+    String? semanticLabel,
   }) : this(
           key: key,
           series: <Series<Object?>>[
@@ -83,6 +86,7 @@ class Chart extends StatelessWidget {
           animation: animation,
           interactions: interactions,
           controller: controller,
+          semanticLabel: semanticLabel,
         );
 
   /// The series to draw, painted in list order. Palette colors are
@@ -114,6 +118,11 @@ class Chart extends StatelessWidget {
   /// Programmatic control of the visible domain (used with [PanZoom]).
   final ChartController? controller;
 
+  /// Override for the accessibility label read by screen readers. When
+  /// null a description is composed from the chart type and series labels
+  /// (and, for donuts, segment names and values).
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     Crosshair? crosshair;
@@ -129,18 +138,49 @@ class Chart extends StatelessWidget {
           panZoom = interaction;
       }
     }
-    return _AnimatedChart(
-      theme: theme ?? ChartTheme.of(context),
-      axes: axes,
-      series: series,
-      textDirection: Directionality.of(context),
-      emphasis: emphasis,
-      animation: animation,
-      crosshair: crosshair,
-      tooltip: tooltip,
-      panZoom: panZoom,
-      controller: controller,
+    return Semantics(
+      container: true,
+      label: semanticLabel ?? _describeChart(),
+      child: _AnimatedChart(
+        theme: theme ?? ChartTheme.of(context),
+        axes: axes,
+        series: series,
+        textDirection: Directionality.of(context),
+        emphasis: emphasis,
+        animation: animation,
+        crosshair: crosshair,
+        tooltip: tooltip,
+        panZoom: panZoom,
+        controller: controller,
+      ),
     );
+  }
+
+  /// Composes a screen-reader description from the series.
+  String _describeChart() {
+    if (series.isEmpty) return 'Empty chart';
+    final first = series.first;
+    if (first is DonutSeries && first.hasCategoryAccessor) {
+      final segments = first.resolveCategoryPoints();
+      return 'Donut chart: ${segments.map(
+            (s) => '${s.$1} ${formatTickLabel(s.$2, 0.01)}',
+          ).join(', ')}';
+    }
+    final kind = switch (first) {
+      LineSeries() => 'Line chart',
+      AreaSeries() => 'Area chart',
+      BarSeries() => 'Bar chart',
+      ScatterSeries() => 'Scatter chart',
+      DonutSeries() => 'Donut chart',
+    };
+    final labels = <String>[
+      for (final s in series)
+        if (s.label != null) s.label!,
+    ];
+    if (labels.isEmpty) {
+      return series.length == 1 ? kind : '$kind with ${series.length} series';
+    }
+    return '$kind: ${labels.join(', ')}';
   }
 }
 
@@ -214,8 +254,7 @@ class _AnimatedChartState extends State<_AnimatedChart>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reducedMotion =
-        MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _reducedMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     if (!_entranceStarted) {
       _entranceStarted = true;
       if (widget.animation.entrance && !_reducedMotion) {

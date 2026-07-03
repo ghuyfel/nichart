@@ -325,12 +325,24 @@ class ChartScene {
   double? _xMin, _xMax, _yMin, _yMax;
   bool _zeroAnchored = false;
 
-  // Radial (donut/pie) mode: no axes, no grid, no crosshair.
+  // Radial (donut/pie) mode: no axes or grid; hover hits segments.
   bool _radial = false;
   List<String> _donutLabels = const [];
   List<double> _donutValues = const [];
   List<double>? _donutAlignedSource;
   Map<String, double>? _donutMorphSource;
+
+  // Radial geometry captured at layout, for hit testing and the hover
+  // highlight (mirrors the painter's math).
+  Offset _donutCenter = Offset.zero;
+  double _donutOuter = 0;
+  double _donutInner = 0;
+  double _donutStartAngle = 0;
+  double _donutGap = 0;
+  double _donutTotal = 0;
+  // Cumulative sweep boundaries relative to the start angle, length n+1
+  // (zero/negative segments contribute zero sweep).
+  List<double> _donutBounds = const [];
 
   // Per-series display state (parallel to _series), kept so a data change
   // can capture exactly what is on screen as the morph starting point.
@@ -516,8 +528,7 @@ class ChartScene {
           scale: scale,
           maxZoom: config.maxZoom,
           // The y axis is pixel-flipped.
-          focalFraction:
-              (plot.bottom - _gestureStartFocal.dy) / plot.height,
+          focalFraction: (plot.bottom - _gestureStartFocal.dy) / plot.height,
           panFraction: delta.dy / plot.height,
           rubberBand: true,
         );
@@ -665,10 +676,61 @@ class ChartScene {
   // Hover / crosshair.
   // --------------------------------------------------------------------
 
+  /// Radial hit test: pointer → segment index, or null when outside the
+  /// ring or over a gap.
+  int? _donutSegmentAt(Offset position) {
+    final v = position - _donutCenter;
+    final distance = v.distance;
+    if (distance < _donutInner - 2 || distance > _donutOuter + 6) return null;
+    var relative = (math.atan2(v.dy, v.dx) - _donutStartAngle) % (2 * math.pi);
+    if (relative < 0) relative += 2 * math.pi;
+    for (var i = 0; i < _donutBounds.length - 1; i++) {
+      if (relative >= _donutBounds[i] && relative < _donutBounds[i + 1]) {
+        return _donutValues[i] > 0 ? i : null;
+      }
+    }
+    return null;
+  }
+
   void _updateHover(Offset position) {
     if (_radial) {
-      // Index-mode crosshair is meaningless on a donut.
-      _setHover(null);
+      if (_tooltip == null && _crosshair == null) return;
+      final index = _donutSegmentAt(position);
+      if (index == null) {
+        _setHover(null);
+        return;
+      }
+      // Sliding within one segment only moves the tooltip anchor — reuse
+      // the built rows instead of rebuilding them every pointer move.
+      if (_hover?.x == index.toDouble()) {
+        _hover = ChartHoverInfo(
+          position: position,
+          x: index.toDouble(),
+          xPixel: position.dx,
+          xLabel: _donutLabels[index],
+          points: _hover!.points,
+        );
+        onHoverChanged?.call(_hover);
+        _interactionChanged.pulse();
+        return;
+      }
+      _setHover(ChartHoverInfo(
+        position: position,
+        x: index.toDouble(),
+        xPixel: position.dx,
+        xLabel: _donutLabels[index],
+        points: <HoveredPoint>[
+          HoveredPoint(
+            seriesIndex: 0,
+            seriesId: _series.first.id,
+            seriesLabel: _donutLabels[index],
+            color: theme.palette[index % theme.palette.length],
+            x: index.toDouble(),
+            y: _donutValues[index],
+            pixel: position,
+          ),
+        ],
+      ));
       return;
     }
     if (_crosshair == null && _tooltip == null) return;
@@ -678,17 +740,19 @@ class ChartScene {
       return;
     }
 
-    // Index mode: snap to the nearest data x across all series.
+    // Index mode: snap to the nearest data x across all series. Sorted
+    // series are searched in O(log n) so hovering a 500k-point chart stays
+    // instant; unsorted ones fall back to a scan.
+    final cursorX = _pixelToDomainX(position.dx, space);
     double? bestX;
     var bestDistance = double.infinity;
-    for (final points in _targetPoints) {
-      for (final p in points) {
-        if (!p.dx.isFinite || !p.dy.isFinite) continue;
-        final d = (space.xToPixel(p.dx) - position.dx).abs();
-        if (d < bestDistance) {
-          bestDistance = d;
-          bestX = p.dx;
-        }
+    for (var i = 0; i < _targetPoints.length; i++) {
+      final p = _nearestPointByX(i, cursorX);
+      if (p == null) continue;
+      final d = (space.xToPixel(p.dx) - position.dx).abs();
+      if (d < bestDistance) {
+        bestDistance = d;
+        bestX = p.dx;
       }
     }
     if (bestX == null) {
@@ -699,19 +763,13 @@ class ChartScene {
 
     final points = <HoveredPoint>[];
     for (var i = 0; i < _series.length; i++) {
-      Offset? nearest;
-      var nearestDistance = double.infinity;
-      for (final p in _targetPoints[i]) {
-        if (!p.dx.isFinite || !p.dy.isFinite) continue;
-        final d = (space.xToPixel(p.dx) - snappedPixel).abs();
-        if (d < nearestDistance) {
-          nearestDistance = d;
-          nearest = p;
-        }
-      }
+      final nearest = _nearestPointByX(i, bestX);
       // Only series that actually have a point at (or effectively at) the
       // snapped x participate.
-      if (nearest == null || nearestDistance > 12) continue;
+      if (nearest == null ||
+          (space.xToPixel(nearest.dx) - snappedPixel).abs() > 12) {
+        continue;
+      }
       points.add(HoveredPoint(
         seriesIndex: i,
         seriesId: _series[i].id,
@@ -738,6 +796,57 @@ class ChartScene {
     ));
   }
 
+  double _pixelToDomainX(double px, CoordinateSpace space) {
+    final plot = space.plotArea;
+    final fraction = (px - plot.left) / plot.width;
+    final xScale = space.xScale;
+    if (xScale is NumericScale) {
+      return xScale.min + fraction * xScale.range;
+    }
+    if (xScale is CategoryScale) {
+      return fraction * xScale.length - 0.5;
+    }
+    return fraction;
+  }
+
+  /// The point of series [i] whose x is nearest [x] — binary search when
+  /// the series is x-sorted, linear scan otherwise. Skips non-finite
+  /// points in the scan path; sorted data is assumed finite.
+  Offset? _nearestPointByX(int i, double x) {
+    final points = _targetPoints[i];
+    if (points.isEmpty) return null;
+    if (_xSorted.length > i && _xSorted[i] && points.length > 8) {
+      var lo = 0;
+      var hi = points.length - 1;
+      while (lo < hi) {
+        final mid = (lo + hi) >> 1;
+        if (points[mid].dx < x) {
+          lo = mid + 1;
+        } else {
+          hi = mid;
+        }
+      }
+      // lo is the first point ≥ x; its left neighbor may be closer.
+      if (lo > 0 &&
+          (points[lo - 1].dx - x).abs() <= (points[lo].dx - x).abs()) {
+        lo--;
+      }
+      final p = points[lo];
+      return p.dx.isFinite && p.dy.isFinite ? p : null;
+    }
+    Offset? nearest;
+    var nearestDistance = double.infinity;
+    for (final p in points) {
+      if (!p.dx.isFinite || !p.dy.isFinite) continue;
+      final d = (p.dx - x).abs();
+      if (d < nearestDistance) {
+        nearestDistance = d;
+        nearest = p;
+      }
+    }
+    return nearest;
+  }
+
   void _setHover(ChartHoverInfo? info) {
     if (identical(info, _hover)) return;
     if (info == null && _hover == null) return;
@@ -745,10 +854,38 @@ class ChartScene {
     _tooltipLayout?.dispose();
     _tooltipLayout = null;
     if (info != null && _tooltip != null && _tooltip!.builder == null) {
-      _tooltipLayout = _buildTooltipLayout(info);
+      _tooltipLayout =
+          _radial ? _buildDonutTooltipLayout(info) : _buildTooltipLayout(info);
     }
     onHoverChanged?.call(info);
     _interactionChanged.pulse();
+  }
+
+  /// Donut tooltip: segment name as the header, one row with the value
+  /// and its share of the total.
+  _TooltipLayout _buildDonutTooltipLayout(ChartHoverInfo info) {
+    final style = theme.tooltipTextStyle;
+    final headerStyle = style.copyWith(
+      color: style.color?.withValues(alpha: (style.color?.a ?? 1) * 0.7),
+    );
+    final valueStyle = style.copyWith(fontWeight: FontWeight.w600);
+    final format = _tooltip?.valueFormatter ?? (v) => formatTickLabel(v, 0.01);
+    final point = info.points.first;
+    final share = _donutTotal <= 0
+        ? ''
+        : '${(point.y / _donutTotal * 100).toStringAsFixed(
+            point.y / _donutTotal < 0.1 ? 1 : 0,
+          )}%';
+    return _TooltipLayout(
+      _layoutText(info.xLabel, headerStyle),
+      <_TooltipRow>[
+        _TooltipRow(
+          point.color,
+          _layoutText(format(point.y), style),
+          _layoutText(share, valueStyle),
+        ),
+      ],
+    );
   }
 
   _TooltipLayout _buildTooltipLayout(ChartHoverInfo info) {
@@ -1113,8 +1250,8 @@ class ChartScene {
           scale = NumericScale(min: window.min, max: window.max);
         }
         xScaleD = scale;
-        final formatter = tickFormatter ??
-            _defaultFormatter(scale, xTickTarget);
+        final formatter =
+            tickFormatter ?? _defaultFormatter(scale, xTickTarget);
         _hoverXFormatter = formatter;
         _xLabels = _buildLabels(
           scale.ticks(targetTickCount: xTickTarget),
@@ -1140,8 +1277,8 @@ class ChartScene {
           DateTime.fromMillisecondsSinceEpoch(scale.max.round()),
           targetTickCount: xTickTarget,
         );
-        final format = tickFormatter ??
-            (DateTime t) => formatTimeTick(t, granularity);
+        final format =
+            tickFormatter ?? (DateTime t) => formatTimeTick(t, granularity);
         _hoverXFormatter = (v) => format(
               DateTime.fromMillisecondsSinceEpoch(v.round()),
             );
@@ -1272,9 +1409,8 @@ class ChartScene {
           final display = _displayPoints(i, plot.width);
           // Sliced/downsampled points no longer align index-wise with the
           // captured morph source — skip morphing for those series.
-          final morphFrom = identical(display, resolved[i])
-              ? _alignedPointSources[i]
-              : null;
+          final morphFrom =
+              identical(display, resolved[i]) ? _alignedPointSources[i] : null;
           return _createPainter(
             _series[i],
             display,
@@ -1302,13 +1438,39 @@ class ChartScene {
     _baseY = null;
     _xWindowable = false;
     _hoverXFormatter = null;
+    final plot = (Offset.zero & size).deflate(4);
     _space = CoordinateSpace(
-      plotArea: (Offset.zero & size).deflate(4),
+      plotArea: plot,
       xScale: const NumericScale(min: 0, max: 1),
       yScale: const NumericScale(min: 0, max: 1),
     );
 
     final donut = _series.first;
+    final style = (donut as DonutSeries).style;
+
+    // Segment geometry for hit testing and the hover highlight, mirroring
+    // the painter (target values — hovering mid-morph snaps to targets).
+    _donutCenter = plot.center;
+    final maxOuter = math.max(1.0, plot.shortestSide / 2);
+    _donutOuter =
+        style.radius == null ? maxOuter : style.radius!.clamp(1.0, maxOuter);
+    _donutInner = (_donutOuter * style.cutout).clamp(0.0, _donutOuter - 1);
+    _donutStartAngle = style.startAngle;
+    _donutGap = style.gap;
+    var total = 0.0;
+    for (final v in _donutValues) {
+      if (v > 0 && v.isFinite) total += v;
+    }
+    _donutTotal = total;
+    final bounds = <double>[0];
+    var cursor = 0.0;
+    for (final v in _donutValues) {
+      if (v > 0 && v.isFinite && total > 0) {
+        cursor += v / total * 2 * math.pi;
+      }
+      bounds.add(cursor);
+    }
+    _donutBounds = bounds;
     _seriesKeys = <String>[donut.id ?? '#0'];
     _targetPoints = _resolved;
     _alignedPointSources = const [null];
@@ -1512,11 +1674,9 @@ class ChartScene {
   Color _displayColor(Series<Object?> s, Color base) {
     switch (s) {
       case LineSeries(:final style):
-        return style.color ??
-            (style.isContext ? theme.contextColor : base);
+        return style.color ?? (style.isContext ? theme.contextColor : base);
       case AreaSeries(:final style):
-        return style.color ??
-            (style.isContext ? theme.contextColor : base);
+        return style.color ?? (style.isContext ? theme.contextColor : base);
       case BarSeries(:final style):
         return style.color ?? base;
       case ScatterSeries(:final style):
@@ -1742,11 +1902,42 @@ class ChartScene {
     canvas.restore();
   }
 
-  /// Paints crosshair, hover markers and the built-in tooltip.
+  /// Paints crosshair, hover markers and the built-in tooltip (or, in
+  /// radial mode, the hovered segment's halo).
   void paintInteraction(Canvas canvas) {
     final target = _space;
     final hover = _hover;
     if (target == null || hover == null) return;
+
+    if (_radial) {
+      // Halo arc just outside the hovered segment — painted on this layer
+      // so hovering never repaints the donut itself.
+      final index = hover.x.round();
+      if (index >= 0 && index < _donutBounds.length - 1) {
+        final gapAngle = _donutOuter <= 0 ? 0.0 : _donutGap / 2 / _donutOuter;
+        final a0 = _donutStartAngle + _donutBounds[index] + gapAngle;
+        final a1 = _donutStartAngle + _donutBounds[index + 1] - gapAngle;
+        if (a1 > a0) {
+          canvas.drawArc(
+            Rect.fromCircle(center: _donutCenter, radius: _donutOuter + 4),
+            a0,
+            a1 - a0,
+            false,
+            Paint()
+              ..color = hover.points.first.color
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 3
+              ..strokeCap = StrokeCap.round,
+          );
+        }
+      }
+      final layout = _tooltipLayout;
+      if (layout != null) {
+        _paintTooltip(canvas, hover, layout);
+      }
+      return;
+    }
+
     final space = _effectiveSpace(target);
     final plot = space.plotArea;
     final crosshair = _crosshair;

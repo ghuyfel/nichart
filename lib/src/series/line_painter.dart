@@ -84,8 +84,7 @@ class LineSeriesPainter extends SeriesPainter {
 
     final area = style.area;
     if (area != null) {
-      final frontier =
-          entrance < 1 ? path.getBounds().right : double.infinity;
+      final frontier = entrance < 1 ? path.getBounds().right : double.infinity;
       _paintArea(canvas, space, pixels, area, color, frontier);
     }
 

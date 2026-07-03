@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # Goldens are rasterized per-platform; baselines are generated on
+    # Windows, so the test job runs there. Analysis is platform-neutral.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+      - name: Dependencies
+        run: flutter pub get
+      - name: Format check
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Publish dry-run
+        run: flutter pub publish --dry-run
+      - name: Analyze example
+        working-directory: example
+        run: flutter analyze
+      - name: Build example (web)
+        working-directory: example
+        run: flutter build web

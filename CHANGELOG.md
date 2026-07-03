@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.0.0
+
+First stable release. The public API is now covered by semantic
+versioning: breaking changes only in major releases.
+
+- Donut interaction: segments are hit-testable — hovering (mouse) or
+  long-pressing (touch) shows a halo on the segment plus a tooltip with
+  its value and share of the total; `ChartTooltip.builder` receives the
+  segment as a `HoveredPoint`. `DonutChart` enables the tooltip by
+  default.
+- `ChartLegend`: a legend widget fed the same `series` list as the chart,
+  resolving labels and colors identically (palette order, explicit
+  colors, context-gray styles); lists segments for a `DonutSeries`.
+- Accessibility: charts, donuts and sparklines now carry semantic labels.
+  By default a description is composed from the chart type and series
+  labels (segment names and values for donuts); override with
+  `semanticLabel:` on `Chart`, `DonutChart` and `Sparkline`.
+- Data-change morphing: unmatched new scatter points now fade in instead
+  of appearing instantly.
+- Hover over sorted series uses binary search — crosshair scrubbing stays
+  instant on 500k-point charts.
+- Continuous integration: analyze, format check, full test suite (goldens
+  pinned to Windows rasterization), publish dry-run and example web build
+  on every push.
+
+Deliberately deferred (additive when they land, no breaking changes
+expected): horizontal bars, `LogScale`, PNG/SVG export via
+`PictureRecorder`.
+
 ## 0.6.0
 
 Milestone M6 — polish & ship.

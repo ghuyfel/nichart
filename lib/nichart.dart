@@ -43,4 +43,5 @@ export 'src/style/emphasis.dart';
 export 'src/style/palette.dart';
 export 'src/widgets/chart.dart';
 export 'src/widgets/donut_chart.dart';
+export 'src/widgets/legend.dart';
 export 'src/widgets/sparkline.dart';

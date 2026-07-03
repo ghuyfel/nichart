@@ -78,8 +78,7 @@ class ChartTheme {
       palette: isDark
           ? ChartPalettes.categoricalDark
           : ChartPalettes.categoricalLight,
-      tooltipBackgroundColor:
-          scheme.inverseSurface.withValues(alpha: 0.96),
+      tooltipBackgroundColor: scheme.inverseSurface.withValues(alpha: 0.96),
       tooltipTextStyle: TextStyle(
         fontSize: 11,
         color: scheme.onInverseSurface,
@@ -94,8 +93,7 @@ class ChartTheme {
   /// theme from `Theme.of(context).colorScheme` — so charts adapt to light
   /// and dark mode with zero configuration.
   static ChartTheme of(BuildContext context) {
-    final scope =
-        context.dependOnInheritedWidgetOfExactType<ChartThemeScope>();
+    final scope = context.dependOnInheritedWidgetOfExactType<ChartThemeScope>();
     if (scope != null) return scope.theme;
     return ChartTheme.fromColorScheme(Theme.of(context).colorScheme);
   }

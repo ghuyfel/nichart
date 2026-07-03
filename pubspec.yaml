@@ -1,9 +1,8 @@
 name: nichart
 description: >-
-  Beautiful, animated, theme-aware charts for Flutter with gorgeous defaults.
-  Line, area, bar, scatter and donut charts from a few lines of code, rendered
+  Beautiful, animated, theme-aware charts for Flutter with gorgeous defaults rendered
   with pure Dart on every platform.
-version: 0.6.0
+version: 1.0.0
 repository: https://github.com/ghuyfel/nichart
 topics:
   - charts

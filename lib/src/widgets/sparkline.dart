@@ -38,6 +38,7 @@ class Sparkline extends StatelessWidget {
     this.smooth = true,
     this.area = const AreaFill.gradient(opacity: 0.18),
     this.theme,
+    this.semanticLabel,
   })  : _mode = _SparklineMode.line,
         emphasizeLast = false;
 
@@ -51,6 +52,7 @@ class Sparkline extends StatelessWidget {
     this.color,
     this.emphasizeLast = false,
     this.theme,
+    this.semanticLabel,
   })  : _mode = _SparklineMode.bars,
         strokeWidth = 0,
         smooth = false,
@@ -79,17 +81,23 @@ class Sparkline extends StatelessWidget {
   /// Explicit theme override; defaults to the ambient chart theme.
   final ChartTheme? theme;
 
+  /// Override for the accessibility label. Defaults to 'Sparkline'.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return _RawSparkline(
-      values: data,
-      mode: _mode,
-      theme: theme ?? ChartTheme.of(context),
-      color: color,
-      strokeWidth: strokeWidth,
-      smooth: smooth,
-      area: area,
-      emphasizeLast: emphasizeLast,
+    return Semantics(
+      label: semanticLabel ?? 'Sparkline',
+      child: _RawSparkline(
+        values: data,
+        mode: _mode,
+        theme: theme ?? ChartTheme.of(context),
+        color: color,
+        strokeWidth: strokeWidth,
+        smooth: smooth,
+        area: area,
+        emphasizeLast: emphasizeLast,
+      ),
     );
   }
 }
@@ -276,9 +284,8 @@ class _RenderSparkline extends RenderBox {
           ],
           style: LineStyle(
             strokeWidth: _strokeWidth,
-            interpolation: _smooth
-                ? LineInterpolation.monotone
-                : LineInterpolation.linear,
+            interpolation:
+                _smooth ? LineInterpolation.monotone : LineInterpolation.linear,
             area: _area,
           ),
           seriesColor: color,

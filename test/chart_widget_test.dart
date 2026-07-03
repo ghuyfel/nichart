@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nichart/nichart.dart';
 
-Widget _host(Widget chart, {Size size = const Size(600, 400), ThemeData? theme}) {
+Widget _host(Widget chart,
+    {Size size = const Size(600, 400), ThemeData? theme}) {
   return MaterialApp(
     theme: theme ?? ThemeData.light(),
     home: Scaffold(

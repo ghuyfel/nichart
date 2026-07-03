@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../animation/chart_animation.dart';
 import '../data/data_point.dart';
+import '../interaction/chart_interaction.dart';
 import '../series/donut_style.dart';
 import '../series/series.dart';
 import '../style/chart_theme.dart';
@@ -35,6 +36,8 @@ class DonutChart extends StatelessWidget {
     this.style = const DonutStyle(),
     this.theme,
     this.animation = const ChartAnimation(),
+    this.interactions = const [ChartTooltip()],
+    this.semanticLabel,
   });
 
   /// The segments, in display order. Palette colors are assigned in the
@@ -59,13 +62,22 @@ class DonutChart extends StatelessWidget {
   /// Motion configuration; the entrance is a clockwise sweep.
   final ChartAnimation animation;
 
+  /// Interaction behaviors. Defaults to `[ChartTooltip()]` — hovering (or
+  /// long-pressing) a segment shows its value and share.
+  final List<ChartInteraction> interactions;
+
+  /// Override for the accessibility label. When null a description is
+  /// composed from the segment names and values.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
     final chart = Chart(
       series: [DonutSeries<CategoryPoint>(data: data, style: style)],
       theme: theme,
       animation: animation,
-      interactions: const [],
+      interactions: interactions,
+      semanticLabel: semanticLabel,
     );
     if (center == null) return chart;
     return Stack(

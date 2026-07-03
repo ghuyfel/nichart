@@ -114,8 +114,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('reduced motion disables entrance and morphing',
-      (tester) async {
+  testWidgets('reduced motion disables entrance and morphing', (tester) async {
     await tester.pumpWidget(
       _host(Chart.line(data: _dataA), disableAnimations: true),
     );

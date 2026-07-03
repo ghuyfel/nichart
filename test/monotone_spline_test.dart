@@ -83,8 +83,7 @@ void main() {
     test('edge cases: empty, single, pair', () {
       expect(monotoneTangents(const <Offset>[]), isEmpty);
       expect(monotoneTangents(const <Offset>[Offset(1, 2)]), [0]);
-      final pair =
-          monotoneTangents(const <Offset>[Offset(0, 0), Offset(2, 4)]);
+      final pair = monotoneTangents(const <Offset>[Offset(0, 0), Offset(2, 4)]);
       expect(pair, [2, 2]); // Both tangents equal the secant slope.
     });
 
@@ -119,8 +118,7 @@ void main() {
     });
 
     test('dashPath produces disjoint subpaths of the source length', () {
-      final source = linearPath(
-          const <Offset>[Offset(0, 0), Offset(100, 0)]);
+      final source = linearPath(const <Offset>[Offset(0, 0), Offset(100, 0)]);
       final dashed = dashPath(source, const <double>[6, 4]);
       var drawn = 0.0;
       for (final metric in dashed.computeMetrics()) {

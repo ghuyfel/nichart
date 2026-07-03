@@ -18,8 +18,7 @@ void main() {
 
     test('keeps endpoints and hits the requested length', () {
       final points = [
-        for (var i = 0; i < 5000; i++)
-          Offset(i * 1.0, math.sin(i / 50) * 100),
+        for (var i = 0; i < 5000; i++) Offset(i * 1.0, math.sin(i / 50) * 100),
       ];
       final sampled = lttbDownsample(points, 300);
       expect(sampled.length, 300);
@@ -29,8 +28,7 @@ void main() {
 
     test('preserves x order', () {
       final points = [
-        for (var i = 0; i < 10000; i++)
-          Offset(i * 1.0, ((i * 37) % 89) * 1.0),
+        for (var i = 0; i < 10000; i++) Offset(i * 1.0, ((i * 37) % 89) * 1.0),
       ];
       final sampled = lttbDownsample(points, 500);
       for (var i = 1; i < sampled.length; i++) {
@@ -68,8 +66,7 @@ void main() {
     test('value semantics', () {
       expect(const Downsampling.auto(), const Downsampling.auto());
       expect(const Downsampling.fixed(100), const Downsampling.fixed(100));
-      expect(const Downsampling.auto(),
-          isNot(const Downsampling.none()));
+      expect(const Downsampling.auto(), isNot(const Downsampling.none()));
     });
   });
 
@@ -98,8 +95,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('20k-point line renders with downsampling off',
-        (tester) async {
+    testWidgets('20k-point line renders with downsampling off', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
@@ -201,8 +197,7 @@ void main() {
       expect(dataLayer.isRepaintBoundary, isTrue);
       expect(interactionLayer.isRepaintBoundary, isTrue);
 
-      final gesture =
-          await tester.createGesture(kind: PointerDeviceKind.mouse);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer(location: Offset.zero);
       addTearDown(gesture.removePointer);
 

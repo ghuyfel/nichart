@@ -91,8 +91,7 @@ class RenderChartLayer extends RenderBox {
   bool get sizedByParent => true;
 
   @override
-  Size computeDryLayout(BoxConstraints constraints) =>
-      constraints.biggest;
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
 
   @override
   void performLayout() {
@@ -184,8 +183,7 @@ class RenderChartInteraction extends RenderBox
   bool get sizedByParent => true;
 
   @override
-  Size computeDryLayout(BoxConstraints constraints) =>
-      constraints.biggest;
+  Size computeDryLayout(BoxConstraints constraints) => constraints.biggest;
 
   @override
   void performLayout() {
