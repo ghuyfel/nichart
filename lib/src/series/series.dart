@@ -41,6 +41,7 @@ sealed class Series<T> {
     ChartAccessor<T>? xAccessor,
     ChartAccessor<T>? yAccessor,
     CategoryAccessor<T>? categoryAccessor,
+    this.pointIdAccessor,
     this.id,
     this.label,
     this.color,
@@ -63,6 +64,16 @@ sealed class Series<T> {
   /// Maps a datum to its category, for categorical (band) x axes.
   /// Inferred for [CategoryPoint]; null otherwise unless provided.
   final CategoryAccessor<T>? categoryAccessor;
+
+  /// Optional stable per-point identity for data-change morphing.
+  ///
+  /// When provided, morphing matches old and new points by this id instead
+  /// of by list index — so inserting or removing points animates the
+  /// survivors correctly instead of shifting everything by one. Points
+  /// with an id that did not exist before appear at their final position.
+  /// Bar segments always match by x position and donut segments by
+  /// category label, so those series ignore this.
+  final String Function(T datum)? pointIdAccessor;
 
   /// Stable identity for animation matching, emphasis targeting and color
   /// assignment across rebuilds. Defaults to the series' position in the
@@ -117,6 +128,17 @@ sealed class Series<T> {
   /// radial series, where there is no x).
   List<double> resolveValues() =>
       <double>[for (final datum in data) yAccessor(datum)];
+
+  /// Resolves per-point morph identities, or null when [pointIdAccessor]
+  /// is not set.
+  ///
+  /// A method rather than direct field access so callers holding a
+  /// `Series<Object?>` don't trip Dart's function-field covariance check.
+  List<String>? resolvePointIds() {
+    final accessor = pointIdAccessor;
+    if (accessor == null) return null;
+    return <String>[for (final datum in data) accessor(datum)];
+  }
 
   /// Resolves [data] into (category, y) pairs for categorical x axes.
   ///
@@ -186,6 +208,7 @@ final class LineSeries<T> extends Series<T> {
     super.xAccessor,
     super.yAccessor,
     super.categoryAccessor,
+    super.pointIdAccessor,
     super.id,
     super.label,
     super.color,
@@ -212,6 +235,7 @@ final class AreaSeries<T> extends Series<T> {
     super.xAccessor,
     super.yAccessor,
     super.categoryAccessor,
+    super.pointIdAccessor,
     super.id,
     super.label,
     super.color,
@@ -302,6 +326,7 @@ final class ScatterSeries<T> extends Series<T> {
     super.xAccessor,
     super.yAccessor,
     super.categoryAccessor,
+    super.pointIdAccessor,
     super.id,
     super.label,
     super.color,

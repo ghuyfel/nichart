@@ -15,7 +15,7 @@ enum AreaFillMode {
 /// The fill under a line — used by `AreaSeries` and `LineStyle.area`.
 ///
 /// ```dart
-/// LineSeries(data: points, style: LineStyle.smooth(area: AreaFill.gradient()))
+/// LineSeries(data: points, style: LineStyle(area: AreaFill.gradient()))
 /// AreaSeries(data: points) // gradient fill by default
 /// ```
 @immutable

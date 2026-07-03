@@ -40,7 +40,7 @@ Chart(
   series: [
     LineSeries(
       data: thisWeek,
-      style: const LineStyle.smooth(area: AreaFill.gradient()),
+      style: const LineStyle(area: AreaFill.gradient()),
     ),
     LineSeries(
       data: lastWeek,
@@ -118,9 +118,11 @@ Charts are screen-reader friendly out of the box (auto-composed semantic
 labels, overridable via `semanticLabel:`), and `ChartLegend` renders a
 legend from the same series list the chart uses.
 
-Planned as additive releases: horizontal bars, `LogScale`, and
-`PictureRecorder`-based PNG/SVG export (painting is already decoupled from
-the widget layer by design).
+Planned as additive releases: horizontal bars, `LogScale`, right-to-left
+layout (charts currently lay out left-to-right regardless of the ambient
+`Directionality`; text shaping does follow it), and `PictureRecorder`-based
+PNG/SVG export (painting is already decoupled from the widget layer by
+design).
 
 ## Example
 

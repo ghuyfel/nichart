@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nichart/nichart.dart';
+// CoordinateSpace is internal painter plumbing, not part of the public API.
+import 'package:nichart/src/core/coordinate_space.dart';
 
 void main() {
   group('ChartTheme', () {

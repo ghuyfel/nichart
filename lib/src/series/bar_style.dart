@@ -23,6 +23,7 @@ class BarStyle {
     this.maxThickness = 24,
     this.cornerRadius = 5,
     this.color,
+    this.mutedOpacity = 0.3,
   });
 
   /// Maximum bar thickness in logical pixels. Bars shrink to fit their
@@ -37,14 +38,21 @@ class BarStyle {
   /// (`Series.color`) or the theme palette.
   final Color? color;
 
+  /// Opacity multiplier applied to non-emphasized bars when
+  /// `BarSeries.emphasizedIndex` (or `Sparkline.bars(emphasizeLast:)`)
+  /// highlights one bar.
+  final double mutedOpacity;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is BarStyle &&
           other.maxThickness == maxThickness &&
           other.cornerRadius == cornerRadius &&
-          other.color == color;
+          other.color == color &&
+          other.mutedOpacity == mutedOpacity;
 
   @override
-  int get hashCode => Object.hash(maxThickness, cornerRadius, color);
+  int get hashCode =>
+      Object.hash(maxThickness, cornerRadius, color, mutedOpacity);
 }

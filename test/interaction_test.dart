@@ -40,14 +40,14 @@ void main() {
       controller.addListener(() => notifications++);
 
       controller.setXDomain(2, 5);
-      expect(controller.xDomain, (min: 2.0, max: 5.0));
+      expect(controller.xDomain, const DomainWindow(min: 2, max: 5));
       expect(notifications, 1);
 
       controller.setXDomain(2, 5); // No-op — same window.
       expect(notifications, 1);
 
       controller.setYDomain(0, 10);
-      expect(controller.yDomain, (min: 0.0, max: 10.0));
+      expect(controller.yDomain, const DomainWindow(min: 0, max: 10));
       expect(notifications, 2);
 
       controller.reset();
@@ -66,7 +66,7 @@ void main() {
       controller.setXDomainTime(min, max);
       expect(
         controller.xDomain,
-        (
+        DomainWindow(
           min: min.millisecondsSinceEpoch.toDouble(),
           max: max.millisecondsSinceEpoch.toDouble(),
         ),
@@ -364,6 +364,6 @@ void main() {
         find.byKey(boundaryKey),
         matchesGoldenFile('goldens/interaction_tooltip_light.png'),
       );
-    });
+    }, tags: 'golden');
   });
 }

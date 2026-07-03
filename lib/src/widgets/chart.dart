@@ -34,7 +34,7 @@ import '../style/emphasis.dart';
 /// Chart(
 ///   axes: const ChartAxes.cartesian(x: TimeAxis(), y: NumericAxis(label: 'Users')),
 ///   series: [
-///     LineSeries(data: thisPeriod, style: LineStyle.smooth(area: AreaFill.gradient())),
+///     LineSeries(data: thisPeriod, style: LineStyle(area: AreaFill.gradient())),
 ///     LineSeries(data: lastPeriod, style: const LineStyle.context()),
 ///   ],
 ///   interactions: const [Crosshair(), ChartTooltip(), PanZoom()],
@@ -173,14 +173,29 @@ class Chart extends StatelessWidget {
       ScatterSeries() => 'Scatter chart',
       DonutSeries() => 'Donut chart',
     };
-    final labels = <String>[
-      for (final s in series)
-        if (s.label != null) s.label!,
-    ];
-    if (labels.isEmpty) {
+    // Labeled series get a value-range summary so a screen reader hears
+    // the data's shape, not just its name (capped to stay listenable).
+    final parts = <String>[];
+    for (final s in series.take(4)) {
+      final label = s.label;
+      if (label == null || s.data.isEmpty) continue;
+      final values = s.resolveValues();
+      var lo = values.first;
+      var hi = values.first;
+      for (final v in values) {
+        if (!v.isFinite) continue;
+        if (v < lo) lo = v;
+        if (v > hi) hi = v;
+      }
+      final range = lo == hi
+          ? formatTickLabel(lo, 0.01)
+          : '${formatTickLabel(lo, 0.01)} to ${formatTickLabel(hi, 0.01)}';
+      parts.add('$label $range');
+    }
+    if (parts.isEmpty) {
       return series.length == 1 ? kind : '$kind with ${series.length} series';
     }
-    return '$kind: ${labels.join(', ')}';
+    return '$kind: ${parts.join('; ')}';
   }
 }
 
@@ -255,6 +270,7 @@ class _AnimatedChartState extends State<_AnimatedChart>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reducedMotion = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    _scene.reduceMotion = _reducedMotion;
     if (!_entranceStarted) {
       _entranceStarted = true;
       if (widget.animation.entrance && !_reducedMotion) {

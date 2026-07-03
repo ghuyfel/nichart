@@ -33,3 +33,23 @@ jobs:
       - name: Build example (web)
         working-directory: example
         run: flutter build web
+
+  web-tests:
+    # Behavior tests on the web runtime (CanvasKit in Chrome). Goldens are
+    # excluded — rasterization differs from the Windows VM baselines.
+    # Non-blocking until observed green on a runner: the chrome test
+    # harness could not be verified on the development machine (browser
+    # launches, harness handshake fails), so this job is informational.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.44.1
+          cache: true
+      - name: Dependencies
+        run: flutter pub get
+      - name: Test on Chrome
+        run: flutter test --platform chrome --exclude-tags golden

@@ -1,0 +1,6 @@
+tags:
+  golden:
+    description: >-
+      Golden-file comparisons. Rasterization differs across platforms and
+      renderers, so these run only where the baselines were generated
+      (Windows VM); exclude them elsewhere with --exclude-tags golden.

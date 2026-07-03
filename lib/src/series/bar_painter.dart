@@ -120,7 +120,7 @@ class BarSeriesPainter extends SeriesPainter {
     if (opacityFactor < 1) {
       base = base.withValues(alpha: base.a * opacityFactor);
     }
-    final muted = base.withValues(alpha: base.a * 0.3);
+    final muted = base.withValues(alpha: base.a * style.mutedOpacity);
 
     // Entrance stagger: each bar starts slightly after the previous one.
     final n = entries.length;

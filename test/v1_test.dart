@@ -133,6 +133,45 @@ void main() {
     });
   });
 
+  group('point-id morphing', () {
+    testWidgets('insertion with pointIdAccessor morphs without errors',
+        (tester) async {
+      Widget chart(List<(String, double, double)> data) {
+        return _host(
+          Chart(
+            series: [
+              ScatterSeries<(String, double, double)>(
+                data: data,
+                xAccessor: (d) => d.$2,
+                yAccessor: (d) => d.$3,
+                pointIdAccessor: (d) => d.$1,
+              ),
+            ],
+          ),
+        );
+      }
+
+      await tester.pumpWidget(
+        chart(const [('a', 0, 10), ('b', 1, 20), ('c', 2, 30)]),
+      );
+      await tester.pumpAndSettle();
+      // Insert a new point at the front: with id matching, a/b/c must
+      // morph from themselves rather than shifting one slot over.
+      await tester.pumpWidget(
+        chart(const [
+          ('new', -1, 5),
+          ('a', 0, 15),
+          ('b', 1, 25),
+          ('c', 2, 35),
+        ]),
+      );
+      await tester.pump(const Duration(milliseconds: 200)); // Mid-morph.
+      expect(tester.takeException(), isNull);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('semantics', () {
     testWidgets('charts compose a screen-reader description', (tester) async {
       await tester.pumpWidget(
@@ -153,7 +192,7 @@ void main() {
         ),
       );
       expect(
-        find.bySemanticsLabel('Line chart: Revenue, Costs'),
+        find.bySemanticsLabel('Line chart: Revenue 1; Costs 2'),
         findsOneWidget,
       );
     });

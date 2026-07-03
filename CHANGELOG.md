@@ -21,13 +21,28 @@ versioning: breaking changes only in major releases.
   of appearing instantly.
 - Hover over sorted series uses binary search — crosshair scrubbing stays
   instant on 500k-point charts.
+- `Series.pointIdAccessor`: stable per-point identities for morphing, so
+  inserting or removing points animates the survivors correctly instead
+  of shifting everything by index. Matching rules are documented on
+  `ChartAnimation`.
+- Rubber-band overscroll now springs back with a short eased glide
+  (respects reduced motion) instead of snapping instantly.
+- `BarStyle.mutedOpacity` configures how far non-emphasized bars dim.
+- The mouse cursor is precise only while the crosshair is engaged over
+  data, and defers elsewhere.
 - Continuous integration: analyze, format check, full test suite (goldens
-  pinned to Windows rasterization), publish dry-run and example web build
-  on every push.
+  pinned to Windows rasterization), a Chrome-runtime pass of all
+  non-golden tests, publish dry-run and example web build on every push.
+- API surface tightened before the freeze (breaking vs 0.6.0): the
+  series painters, `BarEntry` and `CoordinateSpace` are no longer
+  exported (they were unusable implementation details — `Series` is
+  sealed); `LineStyle.smooth` removed (identical to `LineStyle(area:)`);
+  `DomainWindow` is now a class (with `width`) instead of a record
+  typedef.
 
 Deliberately deferred (additive when they land, no breaking changes
-expected): horizontal bars, `LogScale`, PNG/SVG export via
-`PictureRecorder`.
+expected): horizontal bars, `LogScale`, right-to-left layout, PNG/SVG
+export via `PictureRecorder`.
 
 ## 0.6.0
 
@@ -124,7 +139,7 @@ Milestone M3 — motion.
 
 Milestone M2 — the full cartesian series set.
 
-- `AreaSeries` and `LineStyle.smooth(area:)` / `AreaFill`: the signature
+- `AreaSeries` and `LineStyle(area:)` / `AreaFill`: the signature
   gradient fill fading from the series color to transparent at the baseline.
 - `BarSeries` with `BarArrangement.grouped` / `stacked`: max 24 px thick,
   rounded on the data end only, stacked segments separated by a 2 px gap

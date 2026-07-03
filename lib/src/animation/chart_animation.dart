@@ -12,6 +12,18 @@ import 'package:meta/meta.dart';
 ///   point-by-point (and the axes glide to their new domain), instead of
 ///   snapping.
 ///
+/// ## How points match during a morph
+///
+/// Series match by `Series.id` when set, else by list position. Within a
+/// series: bar segments match by x position (new bars grow from zero) and
+/// donut segments by category label (new segments sweep in). Line, area
+/// and scatter points match by `Series.pointIdAccessor` when provided
+/// (unmatched new points appear in place; removed ids simply vanish) —
+/// otherwise by index, with extra new points growing out of the old last
+/// point and unmatched scatter points fading in. Series that were sliced
+/// or downsampled for display skip morphing, since index alignment would
+/// lie.
+///
 /// Charts respect the platform reduced-motion setting
 /// (`MediaQuery.disableAnimations`) automatically; [ChartAnimation.none]
 /// turns everything off unconditionally.

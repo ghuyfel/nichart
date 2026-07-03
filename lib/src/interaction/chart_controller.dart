@@ -1,7 +1,33 @@
 import 'package:flutter/foundation.dart';
 
-/// A visible-domain window: `[min, max]` in domain units.
-typedef DomainWindow = ({double min, double max});
+/// A visible-domain window: `[min, max]` in domain units (numeric values,
+/// epoch milliseconds for time axes).
+@immutable
+class DomainWindow {
+  /// Creates a window spanning `[min, max]`.
+  const DomainWindow({required this.min, required this.max})
+      : assert(min <= max, 'min must be ≤ max');
+
+  /// Lower bound of the visible domain.
+  final double min;
+
+  /// Upper bound of the visible domain.
+  final double max;
+
+  /// The window's span (`max - min`).
+  double get width => max - min;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DomainWindow && other.min == min && other.max == max;
+
+  @override
+  int get hashCode => Object.hash(min, max);
+
+  @override
+  String toString() => 'DomainWindow($min → $max)';
+}
 
 /// Programmatic control of a chart's visible domain.
 ///
@@ -35,7 +61,7 @@ class ChartController extends ChangeNotifier {
   void setXDomain(double min, double max) {
     assert(min < max, 'min must be < max');
     if (_xDomain?.min == min && _xDomain?.max == max) return;
-    _xDomain = (min: min, max: max);
+    _xDomain = DomainWindow(min: min, max: max);
     notifyListeners();
   }
 
@@ -49,7 +75,7 @@ class ChartController extends ChangeNotifier {
   void setYDomain(double min, double max) {
     assert(min < max, 'min must be < max');
     if (_yDomain?.min == min && _yDomain?.max == max) return;
-    _yDomain = (min: min, max: max);
+    _yDomain = DomainWindow(min: min, max: max);
     notifyListeners();
   }
 

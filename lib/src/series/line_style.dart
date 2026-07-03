@@ -17,12 +17,12 @@ enum LineInterpolation {
 /// Visual style for a `LineSeries` or `AreaSeries`.
 ///
 /// The defaults are the product: a 2 px round-capped monotone-smooth stroke.
-/// Use [LineStyle.smooth] to add the signature gradient area fill, and
-/// [LineStyle.context] for a muted, dashed comparison series ("last period"
-/// next to "this period").
+/// Add [area] for the signature gradient fill, and use [LineStyle.context]
+/// for a muted, dashed comparison series ("last period" next to "this
+/// period").
 ///
 /// ```dart
-/// LineSeries(data: thisPeriod, style: LineStyle.smooth(area: AreaFill.gradient()))
+/// LineSeries(data: thisPeriod, style: LineStyle(area: AreaFill.gradient()))
 /// LineSeries(data: lastPeriod, style: const LineStyle.context())
 /// ```
 @immutable
@@ -35,19 +35,6 @@ class LineStyle {
     this.color,
     this.area,
   }) : isContext = false;
-
-  /// A smooth (monotone) line, optionally with an [area] fill below it.
-  const LineStyle.smooth({
-    double strokeWidth = 2.0,
-    List<double>? dashPattern,
-    Color? color,
-    AreaFill? area,
-  }) : this(
-          strokeWidth: strokeWidth,
-          dashPattern: dashPattern,
-          color: color,
-          area: area,
-        );
 
   /// A muted, dashed style for comparison ("context") series.
   ///

@@ -66,8 +66,7 @@ class _GalleryAppState extends State<GalleryApp> {
                       child: NavigationRail(
                         selectedIndex: _page,
                         labelType: NavigationRailLabelType.all,
-                        onDestinationSelected: (i) =>
-                            setState(() => _page = i),
+                        onDestinationSelected: (i) => setState(() => _page = i),
                         destinations: const [
                           NavigationRailDestination(
                             icon: Icon(Icons.dashboard_outlined),
@@ -188,12 +187,27 @@ class DashboardPage extends StatelessWidget {
         Row(
           children: [
             for (final (title, value, delta, spark, bars) in const [
-              ('Active users', '4,812', '+12.4%',
-                  [12.0, 18.0, 14.0, 24.0, 21.0, 33.0, 29.0, 41.0], false),
-              ('Signups', '318', '+4.1%',
-                  [8.0, 6.0, 12.0, 9.0, 14.0, 11.0, 16.0, 18.0], true),
-              ('Churn', '1.9%', '−0.3%',
-                  [22.0, 19.0, 21.0, 17.0, 18.0, 15.0, 14.0, 12.0], false),
+              (
+                'Active users',
+                '4,812',
+                '+12.4%',
+                [12.0, 18.0, 14.0, 24.0, 21.0, 33.0, 29.0, 41.0],
+                false
+              ),
+              (
+                'Signups',
+                '318',
+                '+4.1%',
+                [8.0, 6.0, 12.0, 9.0, 14.0, 11.0, 16.0, 18.0],
+                true
+              ),
+              (
+                'Churn',
+                '1.9%',
+                '−0.3%',
+                [22.0, 19.0, 21.0, 17.0, 18.0, 15.0, 14.0, 12.0],
+                false
+              ),
             ]) ...[
               Expanded(
                 child: Card(
@@ -224,8 +238,7 @@ class DashboardPage extends StatelessWidget {
                           height: 36,
                           width: double.infinity,
                           child: bars
-                              ? Sparkline.bars(
-                                  data: spark, emphasizeLast: true)
+                              ? Sparkline.bars(data: spark, emphasizeLast: true)
                               : Sparkline(data: spark),
                         ),
                       ],
@@ -248,7 +261,7 @@ class DashboardPage extends StatelessWidget {
                 LineSeries<DataPoint>(
                   data: _thisWeek,
                   label: 'This week',
-                  style: const LineStyle.smooth(area: AreaFill.gradient()),
+                  style: const LineStyle(area: AreaFill.gradient()),
                 ),
                 LineSeries<DataPoint>(
                   data: _lastWeek,
@@ -280,7 +293,7 @@ final series = [
   LineSeries(
     data: thisWeek,
     label: 'This week',
-    style: const LineStyle.smooth(area: AreaFill.gradient()),
+    style: const LineStyle(area: AreaFill.gradient()),
   ),
   LineSeries(data: lastWeek, label: 'Last week',
       style: const LineStyle.context()),
@@ -382,7 +395,7 @@ class ThemingPage extends StatelessWidget {
             series: [
               LineSeries<DataPoint>(
                 data: _thisWeek,
-                style: const LineStyle.smooth(area: AreaFill.gradient()),
+                style: const LineStyle(area: AreaFill.gradient()),
               ),
               LineSeries<DataPoint>(
                 data: _lastWeek,
@@ -441,7 +454,7 @@ class LinesPage extends StatelessWidget {
             series: [
               LineSeries<DataPoint>(
                 data: _thisWeek,
-                style: const LineStyle.smooth(area: AreaFill.gradient()),
+                style: const LineStyle(area: AreaFill.gradient()),
               ),
               LineSeries<DataPoint>(
                 data: _lastWeek,
@@ -455,7 +468,7 @@ Chart(
   series: [
     LineSeries(
       data: thisWeek,
-      style: const LineStyle.smooth(area: AreaFill.gradient()),
+      style: const LineStyle(area: AreaFill.gradient()),
     ),
     LineSeries(data: lastWeek, style: const LineStyle.context()),
   ],
@@ -674,9 +687,8 @@ class _MotionPageState extends State<MotionPage> {
       ];
 
   List<CategoryPoint> get _morphBars => [
-        for (final (i, day) in const [
-          'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
-        ].indexed)
+        for (final (i, day)
+            in const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexed)
           CategoryPoint(day, 4 + ((i * 29 + _generation * 41) % 31).toDouble()),
       ];
 
@@ -697,7 +709,7 @@ class _MotionPageState extends State<MotionPage> {
             series: [
               LineSeries<DataPoint>(
                 data: _morphData,
-                style: const LineStyle.smooth(area: AreaFill.gradient()),
+                style: const LineStyle(area: AreaFill.gradient()),
               ),
             ],
           ),
@@ -771,10 +783,7 @@ class _InteractionPageState extends State<InteractionPage> {
         for (var i = 0; i <= 120; i++)
           DataPoint(
             i.toDouble(),
-            140 +
-                ((i * 37) % 89) * 1.6 +
-                ((i * 13) % 23) * 3.0 +
-                i * 0.8,
+            140 + ((i * 37) % 89) * 1.6 + ((i * 13) % 23) * 3.0 + i * 0.8,
           ),
       ];
 
@@ -823,9 +832,7 @@ Chart(series: [...], interactions: const [
             builder: (context, _) {
               final window = _controller.xDomain;
               return FilledButton.tonalIcon(
-                onPressed: window == null
-                    ? null
-                    : () => _controller.reset(),
+                onPressed: window == null ? null : () => _controller.reset(),
                 icon: const Icon(Icons.zoom_out_map),
                 label: Text(
                   window == null
@@ -840,7 +847,7 @@ Chart(series: [...], interactions: const [
             series: [
               LineSeries<DataPoint>(
                 data: _dense,
-                style: const LineStyle.smooth(area: AreaFill.gradient()),
+                style: const LineStyle(area: AreaFill.gradient()),
               ),
             ],
             interactions: const [Crosshair(), ChartTooltip(), PanZoom()],
@@ -928,10 +935,9 @@ class _StressPageState extends State<StressPage> {
     _timingsCallback = (List<FrameTiming> timings) {
       _spans.addAll(timings.map((t) => t.totalSpan));
       if (_spans.length < 8) return;
-      final avgMs =
-          _spans.fold(0, (sum, d) => sum + d.inMicroseconds) /
-              _spans.length /
-              1000;
+      final avgMs = _spans.fold(0, (sum, d) => sum + d.inMicroseconds) /
+          _spans.length /
+          1000;
       _spans.clear();
       _frameStats.value =
           '${(1000 / avgMs).clamp(0, 999).toStringAsFixed(0)} fps · '
@@ -985,8 +991,8 @@ class _StressPageState extends State<StressPage> {
                   builder: (context, stats, _) => Text(
                     stats,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          fontFeatures: const [FontFeature.tabularFigures()],
-                        ),
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),

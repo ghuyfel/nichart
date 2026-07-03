@@ -214,7 +214,7 @@ void main() {
         find.byKey(_boundaryKey),
         matchesGoldenFile('goldens/donut_light.png'),
       );
-    });
+    }, tags: 'golden');
 
     testWidgets('golden — donut dark', (tester) async {
       await tester.pumpWidget(
@@ -231,7 +231,7 @@ void main() {
         find.byKey(_boundaryKey),
         matchesGoldenFile('goldens/donut_dark.png'),
       );
-    });
+    }, tags: 'golden');
 
     testWidgets('golden — pie (cutout 0) light', (tester) async {
       await tester.pumpWidget(
@@ -253,7 +253,7 @@ void main() {
         find.byKey(_boundaryKey),
         matchesGoldenFile('goldens/pie_light.png'),
       );
-    });
+    }, tags: 'golden');
   });
 
   group('sparkline', () {
@@ -337,7 +337,7 @@ void main() {
         find.byKey(_boundaryKey),
         matchesGoldenFile('goldens/sparklines_light.png'),
       );
-    });
+    }, tags: 'golden');
 
     testWidgets('golden — line and bars, dark', (tester) async {
       await tester.pumpWidget(
@@ -367,6 +367,6 @@ void main() {
         find.byKey(_boundaryKey),
         matchesGoldenFile('goldens/sparklines_dark.png'),
       );
-    });
+    }, tags: 'golden');
   });
 }

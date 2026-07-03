@@ -21,6 +21,7 @@ import 'package:flutter/animation.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 
 import '../axes/axis.dart';
@@ -144,6 +145,11 @@ class ChartScene {
   /// Notified when the hover/crosshair state changes (used by widget-built
   /// tooltips). Not a repaint trigger — painting reads state directly.
   void Function(ChartHoverInfo? info)? onHoverChanged;
+
+  /// Whether the platform requests reduced motion — disables the
+  /// rubber-band snap-back glide. Set by the chart widget from
+  /// `MediaQuery.disableAnimations`.
+  bool reduceMotion = false;
 
   void _invalidateLayout() {
     _layoutDirty = true;
@@ -348,12 +354,14 @@ class ChartScene {
   // can capture exactly what is on screen as the morph starting point.
   List<String> _seriesKeys = const [];
   List<List<Offset>> _targetPoints = const [];
+  List<List<String>?> _pointIds = const [];
   List<List<Offset>?> _alignedPointSources = const [];
   Map<int, List<BarEntry>> _targetEntries = const {};
   Map<int, List<BarEntry>?> _alignedEntrySources = const {};
 
   // Morph sources captured on data change, consumed by the next layout.
   Map<String, List<Offset>>? _morphPointsSource;
+  Map<String, List<String>?>? _morphPointIdsSource;
   Map<String, List<BarEntry>>? _morphEntriesSource;
   Scale<double>? _morphXSource;
   NumericScale? _morphYSource;
@@ -380,6 +388,7 @@ class ChartScene {
 
   /// Releases labels, recognizers and listeners.
   void dispose() {
+    _cancelSnapBack();
     _controller?.removeListener(_onControllerChanged);
     _entranceAnimation?.removeListener(_onAnimationTick);
     _morphAnimation?.removeListener(_onAnimationTick);
@@ -398,12 +407,12 @@ class ChartScene {
   // Pointer + gesture handling (called by the interaction render box).
   // --------------------------------------------------------------------
 
-  /// The cursor for the interaction layer's mouse annotation.
+  /// The cursor for the interaction layer's mouse annotation: grabbing
+  /// while panning, precise while the crosshair is engaged over data, and
+  /// deferred elsewhere (axis labels, margins).
   MouseCursor get cursor {
     if (_panning) return SystemMouseCursors.grabbing;
-    if (_crosshair != null || _tooltip != null) {
-      return SystemMouseCursors.precise;
-    }
+    if (_hover != null) return SystemMouseCursors.precise;
     return MouseCursor.defer;
   }
 
@@ -484,6 +493,7 @@ class ChartScene {
       _updateHover(details.localFocalPoint);
       return;
     }
+    _cancelSnapBack();
     _setHover(null);
     _panning = true;
     _gestureStartX = _xWindow ?? _baseX;
@@ -541,16 +551,97 @@ class ChartScene {
   void _handleScaleEnd(ScaleEndDetails details) {
     if (_panZoom == null) return;
     _panning = false;
-    // Rubber band snaps back inside the data domain.
+    // Rubber-band overshoot springs back inside the data domain.
+    DomainWindow? targetX;
+    DomainWindow? targetY;
     final baseX = _baseX;
     if (_xWindow != null && baseX != null) {
-      _xWindow = _clampWindow(_xWindow!, baseX);
-      if (_windowEqualsBase(_xWindow!, baseX)) _xWindow = null;
+      targetX = _clampWindow(_xWindow!, baseX);
     }
     final baseY = _baseY;
     if (_yWindow != null && baseY != null) {
-      _yWindow = _clampWindow(_yWindow!, baseY);
-      if (_windowEqualsBase(_yWindow!, baseY)) _yWindow = null;
+      targetY = _clampWindow(_yWindow!, baseY);
+    }
+    final needsSnapX = targetX != null && !_windowsClose(targetX, _xWindow!);
+    final needsSnapY = targetY != null && !_windowsClose(targetY, _yWindow!);
+    if (!reduceMotion && (needsSnapX || needsSnapY)) {
+      _startSnapBack(
+        x: needsSnapX ? targetX : null,
+        y: needsSnapY ? targetY : null,
+      );
+      return;
+    }
+    if (targetX != null) {
+      _xWindow = _windowEqualsBase(targetX, baseX!) ? null : targetX;
+    }
+    if (targetY != null) {
+      _yWindow = _windowEqualsBase(targetY, baseY!) ? null : targetY;
+    }
+    _pushWindowsToController();
+    _invalidateLayout();
+  }
+
+  // Rubber-band snap-back animation: a short eased glide from the
+  // overshot window to the clamped one, driven by transient frame
+  // callbacks (no ticker provider needed inside the scene).
+  static const Duration _kSnapDuration = Duration(milliseconds: 240);
+  bool _snapActive = false;
+  Duration? _snapStartTime;
+  DomainWindow? _snapFromX, _snapToX, _snapFromY, _snapToY;
+
+  bool _windowsClose(DomainWindow a, DomainWindow b) {
+    final epsilon = (a.max - a.min).abs() * 1e-9 + 1e-12;
+    return (a.min - b.min).abs() <= epsilon && (a.max - b.max).abs() <= epsilon;
+  }
+
+  void _startSnapBack({DomainWindow? x, DomainWindow? y}) {
+    _snapActive = true;
+    _snapStartTime = null;
+    _snapFromX = x == null ? null : _xWindow;
+    _snapToX = x;
+    _snapFromY = y == null ? null : _yWindow;
+    _snapToY = y;
+    SchedulerBinding.instance.scheduleFrameCallback(_snapTick);
+    SchedulerBinding.instance.scheduleFrame();
+  }
+
+  void _cancelSnapBack() {
+    _snapActive = false;
+    _snapStartTime = null;
+  }
+
+  void _snapTick(Duration timestamp) {
+    if (!_snapActive) return;
+    _snapStartTime ??= timestamp;
+    final t = ((timestamp - _snapStartTime!).inMicroseconds /
+            _kSnapDuration.inMicroseconds)
+        .clamp(0.0, 1.0);
+    final eased = Curves.easeOutCubic.transform(t);
+
+    DomainWindow lerp(DomainWindow from, DomainWindow to) => DomainWindow(
+          min: from.min + (to.min - from.min) * eased,
+          max: from.max + (to.max - from.max) * eased,
+        );
+    if (_snapFromX != null && _snapToX != null) {
+      _xWindow = lerp(_snapFromX!, _snapToX!);
+    }
+    if (_snapFromY != null && _snapToY != null) {
+      _yWindow = lerp(_snapFromY!, _snapToY!);
+    }
+
+    if (t >= 1) {
+      _snapActive = false;
+      final baseX = _baseX;
+      if (_xWindow != null && baseX != null) {
+        if (_windowEqualsBase(_xWindow!, baseX)) _xWindow = null;
+      }
+      final baseY = _baseY;
+      if (_yWindow != null && baseY != null) {
+        if (_windowEqualsBase(_yWindow!, baseY)) _yWindow = null;
+      }
+    } else {
+      SchedulerBinding.instance.scheduleFrameCallback(_snapTick);
+      SchedulerBinding.instance.scheduleFrame();
     }
     _pushWindowsToController();
     _invalidateLayout();
@@ -604,6 +695,7 @@ class ChartScene {
   }
 
   void _resetWindows() {
+    _cancelSnapBack();
     if (_xWindow == null && _yWindow == null) return;
     _xWindow = null;
     _yWindow = null;
@@ -655,7 +747,7 @@ class ChartScene {
         min = max - width;
       }
     }
-    return (min: min, max: max);
+    return DomainWindow(min: min, max: max);
   }
 
   DomainWindow _clampWindow(DomainWindow window, DomainWindow base) {
@@ -663,7 +755,7 @@ class ChartScene {
     var min = window.min;
     if (min < base.min) min = base.min;
     if (min + width > base.max) min = base.max - width;
-    return (min: min, max: min + width);
+    return DomainWindow(min: min, max: min + width);
   }
 
   bool _windowEqualsBase(DomainWindow window, DomainWindow base) {
@@ -979,6 +1071,12 @@ class ChartScene {
 
     final effective = _effectiveSpace(space);
     _morphPointsSource = points;
+    // Ids of the captured points (the outgoing data), for id-based
+    // alignment against the incoming data.
+    _morphPointIdsSource = <String, List<String>?>{
+      for (var i = 0; i < _seriesKeys.length; i++)
+        _seriesKeys[i]: i < _pointIds.length ? _pointIds[i] : null,
+    };
     _morphEntriesSource = entries;
     _morphXSource = effective.xScale;
     _morphYSource = effective.yScale;
@@ -1055,6 +1153,7 @@ class ChartScene {
       }
       // Cartesian caches stay empty in radial mode.
       _resolved = <List<Offset>>[const []];
+      _pointIds = const [null];
       _xSorted = const [true];
       _categories = null;
       _barIndices = const [];
@@ -1105,6 +1204,9 @@ class ChartScene {
     }
     _resolved = resolved;
     _categories = categories;
+    _pointIds = <List<String>?>[
+      for (final s in _series) s.resolvePointIds(),
+    ];
 
     _xSorted = <bool>[
       for (final points in resolved)
@@ -1243,7 +1345,7 @@ class ChartScene {
           minOverride: min,
           maxOverride: max,
         );
-        _baseX = (min: scale.min, max: scale.max);
+        _baseX = DomainWindow(min: scale.min, max: scale.max);
         _xWindowable = true;
         final window = _xWindow;
         if (window != null) {
@@ -1265,7 +1367,7 @@ class ChartScene {
           minOverride: min?.millisecondsSinceEpoch.toDouble(),
           maxOverride: max?.millisecondsSinceEpoch.toDouble(),
         );
-        _baseX = (min: scale.min, max: scale.max);
+        _baseX = DomainWindow(min: scale.min, max: scale.max);
         _xWindowable = true;
         final window = _xWindow;
         if (window != null) {
@@ -1291,7 +1393,7 @@ class ChartScene {
         ];
       case CategoryAxis():
         final scale = CategoryScale(categories: categories!);
-        _baseX = (min: -0.5, max: categories.length - 0.5);
+        _baseX = DomainWindow(min: -0.5, max: categories.length - 0.5);
         _xWindowable = false;
         xScaleD = scale;
         final resolvedCategories = categories;
@@ -1322,7 +1424,7 @@ class ChartScene {
       minOverride: yAxis.min,
       maxOverride: yAxis.max,
     );
-    _baseY = (min: yScale.min, max: yScale.max);
+    _baseY = DomainWindow(min: yScale.min, max: yScale.max);
     final yWindow = _yWindow;
     if (yWindow != null) {
       yScale = NumericScale(min: yWindow.min, max: yWindow.max);
@@ -1378,7 +1480,12 @@ class ChartScene {
     _targetPoints = resolved;
     _alignedPointSources = <List<Offset>?>[
       for (var i = 0; i < _series.length; i++)
-        _alignPoints(_morphPointsSource?[_seriesKeys[i]], resolved[i]),
+        _alignPoints(
+          _morphPointsSource?[_seriesKeys[i]],
+          _morphPointIdsSource?[_seriesKeys[i]],
+          resolved[i],
+          i < _pointIds.length ? _pointIds[i] : null,
+        ),
     ];
     _targetEntries = barEntries;
     _alignedEntrySources = <int, List<BarEntry>?>{
@@ -1553,10 +1660,38 @@ class ChartScene {
     return points.sublist(start, end);
   }
 
-  /// Index-aligns a captured morph source to [target] (padding with the
-  /// source's last point so extra target points grow out of the old end).
-  List<Offset>? _alignPoints(List<Offset>? source, List<Offset> target) {
+  /// Aligns a captured morph source to [target].
+  ///
+  /// When both sides carry point ids (see `Series.pointIdAccessor`), each
+  /// target point starts from the source point with the same id; points
+  /// whose id is new appear at their final position. Without ids, points
+  /// align by index, padding with the source's last point so extra target
+  /// points grow out of the old end.
+  List<Offset>? _alignPoints(
+    List<Offset>? source,
+    List<String>? sourceIds,
+    List<Offset> target,
+    List<String>? targetIds,
+  ) {
     if (source == null || source.isEmpty || target.isEmpty) return null;
+    if (sourceIds != null &&
+        targetIds != null &&
+        sourceIds.length == source.length &&
+        targetIds.length == target.length) {
+      final byId = <String, Offset>{
+        for (var i = 0; i < sourceIds.length; i++) sourceIds[i]: source[i],
+      };
+      var anyMatch = false;
+      final aligned = <Offset>[
+        for (var i = 0; i < target.length; i++)
+          () {
+            final match = byId[targetIds[i]];
+            if (match != null) anyMatch = true;
+            return match ?? target[i];
+          }(),
+      ];
+      return anyMatch ? aligned : null;
+    }
     return <Offset>[
       for (var i = 0; i < target.length; i++)
         i < source.length ? source[i] : source.last,
