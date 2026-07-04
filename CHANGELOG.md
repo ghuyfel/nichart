@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.1
+
+- Fix: builder tooltips (`ChartTooltip(builder: ...)`) now stay inside
+  the chart bounds — flipped to the left of the anchor near the right
+  edge and clamped on both axes, instead of overflowing off-screen for
+  points close to an edge.
+
 ## 1.0.0
 
 First stable release. The public API is now covered by semantic

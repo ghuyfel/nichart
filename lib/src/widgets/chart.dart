@@ -352,10 +352,15 @@ class _AnimatedChartState extends State<_AnimatedChart>
               valueListenable: _hoverInfo,
               builder: (context, info, _) {
                 if (info == null) return const SizedBox.shrink();
-                return Positioned(
-                  left: info.xPixel + 12,
-                  top: info.position.dy - 12,
-                  child: IgnorePointer(child: tooltipBuilder(context, info)),
+                return Positioned.fill(
+                  child: IgnorePointer(
+                    child: CustomSingleChildLayout(
+                      delegate: _TooltipLayoutDelegate(
+                        anchor: Offset(info.xPixel, info.position.dy),
+                      ),
+                      child: tooltipBuilder(context, info),
+                    ),
+                  ),
                 );
               },
             ),
@@ -363,4 +368,43 @@ class _AnimatedChartState extends State<_AnimatedChart>
       ),
     );
   }
+}
+
+/// Places the builder tooltip beside its anchor point, flipped to the
+/// left when it would leave the chart's right edge and clamped inside
+/// the chart bounds on both axes — a tooltip near the edge stays fully
+/// readable instead of running off-screen.
+class _TooltipLayoutDelegate extends SingleChildLayoutDelegate {
+  const _TooltipLayoutDelegate({required this.anchor});
+
+  /// The hovered point, in chart-local pixels.
+  final Offset anchor;
+
+  /// Gap between the anchor and the tooltip.
+  static const double _gap = 12;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints.loose(constraints.biggest);
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    var dx = anchor.dx + _gap;
+    if (dx + childSize.width > size.width) {
+      // Flip to the left of the anchor when the right side is tight.
+      dx = anchor.dx - _gap - childSize.width;
+    }
+    dx = dx.clamp(0.0, (size.width - childSize.width).clamp(0.0, size.width));
+
+    var dy = anchor.dy - _gap;
+    dy = dy.clamp(
+      0.0,
+      (size.height - childSize.height).clamp(0.0, size.height),
+    );
+    return Offset(dx, dy);
+  }
+
+  @override
+  bool shouldRelayout(_TooltipLayoutDelegate oldDelegate) =>
+      anchor != oldDelegate.anchor;
 }
