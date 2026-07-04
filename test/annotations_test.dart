@@ -78,8 +78,7 @@ void main() {
   });
 
   group('NumericAxis.ticks', () {
-    testWidgets('explicit ticks replace the generated labels',
-        (tester) async {
+    testWidgets('explicit ticks replace the generated labels', (tester) async {
       await tester.pumpWidget(_host(
         Chart(
           axes: const ChartAxes.cartesian(
@@ -156,8 +155,7 @@ void main() {
 
       // Hover near x = 3 (between data points 0 and 6): the snap must go
       // to a data x, never to the guide's x = 3.
-      final gesture =
-          await tester.createGesture(kind: PointerDeviceKind.mouse);
+      final gesture = await tester.createGesture(kind: PointerDeviceKind.mouse);
       await gesture.addPointer();
       final center = tester.getCenter(find.byType(Chart));
       await gesture.moveTo(center);

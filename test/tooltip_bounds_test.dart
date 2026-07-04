@@ -50,8 +50,7 @@ void main() {
 
     // Hover near the right of the plot: the tooltip must flip/clamp
     // instead of running past the chart's right edge.
-    await gesture
-        .moveTo(Offset(chartRect.right - 40, chartRect.center.dy));
+    await gesture.moveTo(Offset(chartRect.right - 40, chartRect.center.dy));
     await tester.pump();
 
     expect(find.byKey(tooltipKey), findsOneWidget);

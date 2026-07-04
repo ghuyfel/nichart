@@ -1352,7 +1352,12 @@ class ChartScene {
     };
     final Scale<double> xScaleD;
     switch (xAxis) {
-      case NumericAxis(:final min, :final max, :final ticks, :final tickFormatter):
+      case NumericAxis(
+          :final min,
+          :final max,
+          :final ticks,
+          :final tickFormatter
+        ):
         var scale = NumericScale.fromExtent(
           _xMin ?? 0,
           _xMax ?? 1,
@@ -2001,8 +2006,8 @@ class ChartScene {
       for (final annotation in _annotations) {
         if (annotation is! BandAnnotation) continue;
         final paint = Paint()
-          ..color = annotation.color ??
-              theme.gridLineColor.withValues(alpha: 0.15);
+          ..color =
+              annotation.color ?? theme.gridLineColor.withValues(alpha: 0.15);
         final Rect rect;
         if (annotation.vertical) {
           final x1 = space.xToPixel(annotation.from);
