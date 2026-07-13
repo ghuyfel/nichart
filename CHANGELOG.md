@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+- README: animated previews (entrance, data morphing, crosshair +
+  tooltip), regenerable via `flutter test tool/readme_gifs_test.dart`.
+- Contributor tooling: pre-commit hook auto-formats staged Dart files
+  (`git config core.hooksPath .githooks`). No library changes.
+
 ## 1.0.1
 
 - Fix: builder tooltips (`ChartTooltip(builder: ...)`) now stay inside

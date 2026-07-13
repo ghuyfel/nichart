@@ -2,7 +2,7 @@
 description: >-
   Beautiful, animated, theme-aware charts for Flutter with gorgeous defaults rendered
   with pure Dart on every platform.
-version: 1.0.1
+version: 1.0.2
 repository: https://github.com/ghuyfel/nichart
 topics:
   - charts
