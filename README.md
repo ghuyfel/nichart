@@ -12,6 +12,8 @@ import 'package:nichart/nichart.dart';
 Chart.line(data: [DataPoint(0, 2), DataPoint(1, 5), DataPoint(2, 3)])
 ```
 
+![Entrance animation: gradient area chart with a muted context series](https://raw.githubusercontent.com/ghuyfel/nichart/main/doc/gifs/hero.gif)
+
 - **Pure Dart.** All rendering via `dart:ui` on a custom `RenderBox` — no
   platform channels, no native code. Android, iOS, Windows, macOS, Linux, Web.
 - **Zero required configuration.** Every styling parameter has an opinionated
@@ -51,7 +53,11 @@ Chart(
 ```
 
 Every chart ships with a crosshair and tooltip (hover on desktop, drag or
-long-press on touch). Pan/zoom is one line more:
+long-press on touch):
+
+![Crosshair and tooltip following the pointer](https://raw.githubusercontent.com/ghuyfel/nichart/main/doc/gifs/interact.gif)
+
+Pan/zoom is one line more:
 
 ```dart
 Chart(
@@ -62,7 +68,9 @@ Chart(
 ```
 
 Bars need zero axis configuration — the category axis is inferred from the
-data:
+data, and when the data changes, the chart *morphs* instead of snapping:
+
+![Bars morphing between datasets](https://raw.githubusercontent.com/ghuyfel/nichart/main/doc/gifs/morph.gif)
 
 ```dart
 Chart(series: [BarSeries(data: weekCounts)])            // rounded weekday bars
@@ -129,6 +137,17 @@ design).
 The [example app](example/) is a gallery that doubles as the documentation —
 each page shows its own source. Run it with `flutter run` from `example/`
 (web, desktop and mobile).
+
+## Contributing
+
+One-time setup after cloning — enables the pre-commit hook that
+auto-formats staged Dart files (CI rejects unformatted code):
+
+```
+git config core.hooksPath .githooks
+```
+
+The README GIFs regenerate with `flutter test tool/readme_gifs_test.dart`.
 
 ## License
 

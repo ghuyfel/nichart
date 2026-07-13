@@ -4,6 +4,12 @@ build/
 pubspec.lock
 test/failures/
 
+# Development-only assets: README GIFs are referenced by absolute URL,
+# hooks and tooling are for contributors.
+doc/
+.githooks/
+tool/
+
 # Example platform runners: keep the example's source in the archive, not
 # the generated runner scaffolding.
 example/build/
